@@ -1,0 +1,463 @@
+---
+title: "Unsolved Homicides in the United States"
+output: 
+  flexdashboard::flex_dashboard:
+    theme:
+      version: 4
+      bootswatch: pulse
+      navbar-bg: "#F393AB"
+    orientation: columns
+    vertical_layout: fill
+    source_code: embed
+---
+
+<style>
+.chart-title {  /* chart_title  */
+   font-size: 16px;
+   font-family: Helvetica;
+  }
+body{ /* Normal  */
+      font-size: 14px;
+  }
+</style>
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Introduction
+================================
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Abstract
+
+```{r data}
+library(pacman)
+p_load(ggplot2, tidyverse, maps, plotly, viridis)
+
+## reading the dataset and dropping irrelevant data
+crime <- read.csv("/Users/erin/Desktop/R/data/crime.csv")
+crime <- crime %>% 
+  rename(Type = Crime.Type, Solved = Crime.Solved, VicSex = Victim.Sex, 
+        VicAge = Victim.Age, VicRace = Victim.Race, PerpSex = Perpetrator.Sex,
+        PerpAge = Perpetrator.Age, PerpRace = Perpetrator.Race) %>% 
+  select(-c(Record.ID, Agency.Code, Agency.Name, Agency.Type, 
+            Incident, Record.Source, Victim.Ethnicity, 
+            Perpetrator.Ethnicity, Victim.Count, Perpetrator.Count, 
+            Record.Source))
+
+## remove hawaii alaska and dc for map purposes, still enough data points
+crime <- crime[crime$State != "Hawaii" & crime$State != "Alaska" & crime$State !="District of Columbia",]
+
+## combining firearm values
+crime$Weapon[crime$Weapon=="Handgun"]<-"Firearm"
+crime$Weapon[crime$Weapon=="Shotgun"]<-"Firearm"
+crime$Weapon[crime$Weapon=="Rifle"]<-"Firearm"
+crime$Weapon[crime$Weapon=="Gun"]<-"Firearm"
+```
+
+The purpose of this research is to determine the trends of homicide in the United States and, furthermore, in Ohio. Through the close observation of data frames and manipulation of the data, a "unsolved" homicide rate was calculated, which takes the number of unsolved homicides in a region over the total number of homicides there. While California, Texas, and New York are the states with the highest number of deaths, the states with the highest rate of unsolved homicides are New York, Maryland, and Illinois. A similar difference can be seen in Ohio's counties: Cuyahoga, Franklin, and Hamilton have the highest count of homicides while Knox, Auglaize, and Paulding have the highest unsolved rates. Through graphical analysis, we see that African American males between the ages of 18 to 30 in Ohio face homicide cases that go unsolved more often than others. Finally, almost two-thirds of all homicides in Ohio are committed using some sort of firearm. 
+<br>
+<br>
+Variables considered throughout this analysis include:
+<br>
+• City & State of Homicide
+<br>
+• Year & Month of Homicide
+<br>
+• Whether the case was solved or not
+<br>
+• Victim Sex, Race, and Age
+<br>
+• Perpetrator Sex, Race, and Age
+<br>
+• Relation
+<br>
+• & Weapon Used
+
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Background Information
+
+Every year, at least 5,000 perpetrators get away with murder; this means that, today, about a third of homicide cases go unsolved. National statistics on murder are estimates and projections based on incomplete police reports, as no agency's are assigned to actually monitor failed cases. 
+<br>
+<br>
+The [Murder Accountability Project](https://www.murderdata.org) is a non-profit organization that compiles data from federal, state, and local governments about unsolved homicides in order to educate Americans about the importance of accurately accounting for these failed cases. All of the data is gathered by Thomas Hargrove, a retired investigative journalist as well as former White House correspondent. The data used in this analysis was obtained from [Kaggle](https://www.kaggle.com/datasets/murderaccountability/homicide-reports).
+
+### Research Question(s)
+
+1) What is the distribution of unsolved homicides across the United States?
+2) More specifically, what is the distribution of unsolved homicides in Ohio?
+3) What qualities are most prevalent in unsolved murder victims?
+    a) What is the distribution of Victim Sex?
+    b) What is the distribution of Victim Race?
+    c) What is the distribution of Victim Age?
+    d) What is the distribution of murder weapons?
+
+Exploring the Data
+================================
+
+Column {data-width=500, .tabset}
+-----------------------------------------------------------------------
+
+### US Unsolved Map
+
+```{r map1}
+## creating us map
+us_map <- map_data("state") %>% 
+  filter(region != "district of columbia") %>% 
+  select(-subregion)
+us_map$region <- unname(sapply(us_map$region, str_to_title))
+
+## finding total count of unsolved homicides
+## 0 - solved, 1 - unsolved
+crime$Solved <- crime$Solved %>% 
+  recode("Yes" = 0,
+         "No" = 1)
+usUnsolved <- aggregate(crime$Solved, list(crime$State), FUN=sum)
+
+## finding total count of homicides
+## joining data and finding unsolved rate
+us_count <- crime %>% 
+  group_by(State) %>% 
+  mutate(count = n()) %>% 
+  select(State, count) %>% 
+  distinct()
+
+us_count <- us_count %>% 
+  left_join(usUnsolved, by = c("State" = "Group.1"))
+
+colnames(us_count)[colnames(us_count) == "x"] <- "unsolvCount"
+
+us_count <- us_count %>% 
+  mutate(unsolvRate = round((unsolvCount / count), 5))
+
+## left joining datasets
+crime_map <- us_count %>% 
+  left_join(us_map, by = c("State" = "region"))
+
+us_count <- crime_map %>% 
+  group_by(State) %>% 
+  summarise(long = mean(long), lat = mean(lat), count = mean(count),
+            unsolvCount = mean(unsolvCount), unsolvRate = mean(unsolvRate))
+us_count$abb <- state.abb[-c(2,11)]
+
+## creating united states graph
+g1 <- ggplot(crime_map, aes(x = long, y = lat)) +
+  geom_polygon(aes(group = group, fill = unsolvRate,
+                   text = paste0("State: ", State, "\n",
+                                 "Total Homicides: ", count, "\n",
+                                 "Unsolved Homicides: ", unsolvCount, "\n",
+                                 "Unsolved Homicide Rate: ", unsolvRate)), colour = "white") +
+  scale_fill_viridis_c(option = "F") +
+  theme_minimal() +
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y=element_blank(),
+        axis.text.y=element_blank(), axis.ticks.y=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.background=element_blank()) +
+  labs(fill = "Unsolved Rate", title = "Distribution of US Homicide Cases")
+
+ggplotly(g1, tooltip="text")
+```
+
+### US Count Map
+
+```{r map2}
+## bubble map
+us_top15 <- us_count %>% 
+  arrange(desc(count)) %>% 
+  head(15)
+us_top15 <- semi_join(crime_map, us_top15, by = "State")
+
+top15_map <- us_top15 %>% 
+  group_by(State) %>% 
+  summarise(long = mean(long), lat = mean(lat), count = mean(count))
+
+g3 <- crime_map %>% 
+  ggplot() + 
+  geom_polygon(aes(x = long, y = lat, group = group, text = State),
+               fill = "grey", alpha = 0.5, colour = "white") +
+  geom_point(data = top15_map,
+             aes(x = long, y = lat, size = count, color = count, alpha = count,
+                 text = paste0(State, ":", count))) +
+  scale_size_continuous(range=c(1,25)) +
+  scale_color_viridis(option="F", name = "Number of Homicides") +
+  coord_map() + 
+  theme_minimal() +
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y=element_blank(),
+        axis.text.y=element_blank(), axis.ticks.y=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.background=element_blank()) +
+  labs(title = "Top 15 Counts of Homicides")
+
+ggplotly(g3, tooltip = "text")
+```
+
+
+### Glimpse of the Data
+
+```{r glimpse}
+glimpse.crime <- crime %>% 
+  select(State, Year, Month, Solved, VicSex, VicRace, VicAge, Weapon) %>% 
+  arrange(Year)
+glimpse.crime <- glimpse.crime[sample(1:nrow(glimpse.crime), 1000,
+   replace=FALSE),]
+
+DT::datatable(glimpse.crime, colnames = c("State", "Year", "Month", "Unsolved",
+                                          "Victim Sex", "Victim Race",
+                                          "Victim Age", "Weapon"))
+```
+
+### Raw Counts
+
+```{r counts}
+count_table <- us_count %>% 
+  arrange(desc(count)) %>% 
+  select(State, count, unsolvCount)
+
+DT::datatable(count_table, colnames = c("State", "Homicide Count", "Unsolved Count"))
+```
+
+
+Ohio Analysis
+================================
+
+Column {data-width=500, .tabset}
+-----------------------------------------------------------------------
+
+### Ohio Unsolved Map
+
+```{r map3}
+## narrowing down to only ohio data
+ohio <- crime[crime$State=="Ohio",]
+
+## same process for map making as us map
+ohio_county <- map_data("county", region = "ohio")
+ohio_county$subregion <- str_to_title(ohio_county$subregion)
+
+ohio_count <- ohio %>% 
+  group_by(City) %>% 
+  mutate(count = n()) %>%
+  select(City, count) %>% 
+  distinct() 
+
+ohUnsolved <- aggregate(ohio$Solved, list(ohio$City), FUN=sum)
+
+ohio_count <- ohio_count %>% 
+  left_join(ohUnsolved, by = c("City" = "Group.1"))
+
+colnames(ohio_count)[colnames(ohio_count) == "x"] <- "unsolvCount"
+
+ohio_count <- ohio_count %>% 
+  mutate(unsolvRate = round((unsolvCount / count), 5))
+
+ohio_map <- ohio_count %>% 
+  left_join(ohio_county, by = c("City" = "subregion"))
+
+ohio_count <- ohio_map %>% 
+  group_by(City) %>% 
+  summarise(long = mean(long), lat = mean(lat), count = mean(count),
+            unsolvCount = mean(unsolvCount), unsolvRate = mean(unsolvRate))
+
+g2 <- ggplot(ohio_map, aes(x = long, y = lat)) +
+  geom_polygon(aes(group = group, fill = unsolvRate,
+                   text = paste0("County: ", City, "\n",
+                                 "Total Homicides: ", count, "\n",
+                                 "Unsolved Homicides: ", unsolvCount, "\n",
+                                 "Unsolved Homicide Rate: ", unsolvRate)), colour = "white") +
+  scale_fill_viridis_c(option = "F") +
+  theme_minimal() +
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y=element_blank(),
+        axis.text.y=element_blank(), axis.ticks.y=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.background=element_blank()) +
+  labs(fill = "Unsolved Rate", title = "Distribution of Ohio Homicide Cases")
+
+ggplotly(g2, tooltip="text")
+```
+
+### Ohio Count Map
+
+```{r map4}
+## bubble map
+ohio_top10 <- ohio_count %>% 
+  arrange(desc(count)) %>% 
+  head(10)
+ohio_top10 <- semi_join(ohio_map, ohio_top10, by = "City")
+
+top10oh_map <- ohio_top10 %>% 
+  group_by(City) %>% 
+  summarise(long = mean(long), lat = mean(lat), count = mean(count))
+
+g4 <- ohio_map %>% 
+  ggplot() + 
+  geom_polygon(aes(x = long, y = lat, group = group, text = City),
+               fill = "grey", alpha = 0.5, colour = "white") +
+  geom_point(data = top10oh_map,
+             aes(x = long, y = lat, size = count, color = count, alpha = count,
+                 text = paste0(City, ":", count))) +
+  scale_size_continuous(range=c(1,25)) +
+  scale_color_viridis(option="F", name = "Number of Homicides") +
+  coord_map() + 
+  theme_minimal() +
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), axis.title.y=element_blank(),
+        axis.text.y=element_blank(), axis.ticks.y=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.background=element_blank()) +
+  labs(title = "Top 10 Counts of Homicides")
+
+ggplotly(g4, tooltip = "text")
+```
+
+### Ohio Raw Counts
+
+```{r ohcounts}
+ohcount_table <- ohio_count %>% 
+  arrange(desc(count)) %>% 
+  select(City, count, unsolvCount)
+
+DT::datatable(ohcount_table, colnames = c("County", "Homicide Count", "Unsolved Count"))
+```
+
+Column {data-width=500, .tabset}
+-----------------------------------------------------------------------
+
+### VicSex
+
+```{r vicsex}
+## reverting solved back to character values for graph purposes
+ohio$Solved[ohio$Solved == 0]<-"Yes"
+ohio$Solved[ohio$Solved == 1]<-"No"
+
+## bar charts of victim characteristics 
+## dropping unknown in the graph just bc only 52 observations
+p1 <- ggplot(ohio, aes(x = VicSex, fill = as.factor(Solved))) + geom_bar() +
+  scale_fill_discrete(name = "Solved?", type = c("#ffcde3", "#aa6785")) + 
+  scale_x_discrete(limits = c("Female", "Male")) +
+  labs(title = "Distribution of Victim Sex in Ohio", x = "Victim Sex", y = "Number of Homicides") +
+  theme_classic()
+ggplotly(p1)
+```
+
+### VicRace
+
+```{r vicrace}
+## renaming some races to better fit graph
+ohio$VicRace[ohio$VicRace=="Asian/Pacific Islander"]<-"Asian/PI"
+ohio$VicRace[ohio$VicRace=="Native American/Alaska Native"]<-"Native Amer"
+
+p2 <- ggplot(ohio, aes(x = VicRace, fill = as.factor(Solved))) + geom_bar() +
+  scale_fill_discrete(name = "Solved?", type = c("#ffcde3", "#aa6785")) + 
+  labs(title = "Distribution of Victim Race in Ohio", x = "Victim Race", y = "Number of Homicides") +
+  theme_classic()
+ggplotly(p2)
+```
+
+### VicAge
+
+```{r age}
+## some ages entered incorrectly as 998 so we need to fix this... 
+## just gonna narrow down data
+ohio_age <- ohio %>% 
+  mutate(AgeGroup = case_when(
+    VicAge < 18 ~ "18-",
+    18 <= VicAge & VicAge < 30 ~ "18-30",
+    30 <= VicAge & VicAge < 40 ~ "30-40",
+    40 <= VicAge & VicAge < 50 ~ "40-50",
+    50 <= VicAge & VicAge < 60 ~ "50-60",
+    60 <= VicAge & VicAge < 70 ~ "60-70",
+    70 <= VicAge & VicAge < 80 ~ "70-80",
+    80 <= VicAge & VicAge < 90 ~ "80-90")) %>% 
+  na.omit()
+
+p3 <- ggplot(ohio_age, aes(x = AgeGroup, fill = as.factor(Solved))) + geom_bar() +
+  scale_fill_discrete(name = "Solved?", type = c("#ffcde3", "#aa6785")) + 
+  labs(title = "Distribution of Victim Age in Ohio", x = "Age Group", y = "Number of Homicides") +
+  coord_flip() +
+  theme_classic()
+ggplotly(p3)
+```
+
+### Weapon
+
+```{r weapon}
+p4 <- ggplot(ohio, aes(x = Weapon, fill = as.factor(Solved))) + geom_bar() +
+  scale_fill_discrete(name = "Solved?", type = c("#ffcde3", "#aa6785")) + 
+  labs(title = "Distribution of Murder Weapons Used in Ohio", x = "Weapon", y = "Number of Homicides") +
+  coord_flip() +
+  theme_classic()
+ggplotly(p4, tooltip = "text")
+```
+
+### Weapon*
+
+```{r weapon2}
+### pie chart to see more of the weapon distribution since so many types
+weapon_count <- count(ohio, Weapon)
+weapon_count$percent <- round(weapon_count$n/sum(weapon_count$n)*100,2)
+
+colList = c("#FEF6F8","#FAD1DB","#B8143D","#F07594","#EB4770","#E6194C",
+            "#F5A3B8","#A11236","#8A0F2E","#5C0A1F","#450817","#2E050F")
+
+pie <- plot_ly(weapon_count, labels = ~Weapon, values = ~n, type = 'pie', marker=list(colors=colList))
+pie <- pie %>% layout(title = 'Weapon Distribution in Ohio',
+                      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+pie
+```
+
+Discussion
+================================
+
+Column {data-width=550, .tabset}
+-----------------------------------------------------------------------
+
+### US Results
+There are 628384 observations in our data once we drop Alaska, Hawaii, and the District of Columbia. Overall, there is about a rate of 29.4% for unsolved homicide cases in the United States. Specifically, New York, Maryland, Illinois, Massachusetts, and California have the highest state wide rates. On the other hand, we see the most solved cases coming out of North Dakota, Montana, South Dakota, South Carolina, and Idaho. I would say that these results make sense logically; we see more murders going unsolved in areas with denser populations. As sad as it is to say, more people would probably notice a person going missing in a small North Dakota town than bustling New York City. One might argue that smaller, spread out towns would make it easier to get away with murder, but our numbers seem to dismiss this belief. 
+
+### Ohio Results
+
+The Ohio data contains 19158 observations. About 28.3% of homicide cases remain unsolved. We would suspect the highest number of unsolved cases to correspond to the counties with the highest population, just due to the sheer amount of people located there. These would be the counties with cities like Columbus, Toledo, Cleveland, Cincinnati, and Dayton; so, Franklin, Lucas, Cuyahoga, Hamilton, and Montgomery, respectively. 
+However, we see that the counties with the highest rate of unsolved homicides are Knox, Auglaize, and Paulding. When observing the data more closely in order to determine why this is, we see that all three of the counties have less than ten homicides observed in general. So, this is making the rates look a lot larger than they are when comparing to counties with thousands of homicides. 
+<br>
+<br>
+Through the distribution of victim sex, we see that almost three times the amount of males than females were victims of homicide in Ohio. About 24.26% of female homicide cases remain unsolved, while cases with male victims are about 29.70% unsolved. 
+<br>
+<br>
+The majority of homicide cases in Ohio involve victims who are either White or Black. This is most likely because the majority of the population of the state identify as one of the two races, so let us consider primarily consider these. Based on the [Ohio Census](https://www.census.gov/quickfacts/OH), we see that approximately 81% of the population is White and 13% is Black. However, about 41% of homicides in Ohio involve White victims and a whopping 58% of cases invovle Black victims. 
+<br>
+<br>
+The highest amount of homicides happen to victims between the age of 18-30, with the amount of cases decreasing exponentially as the victims get older. We do, however, see about 11% of cases occur to victims who are minors; though, these cases, at least visually, appear to be solved more often. 
+<br>
+<br>
+The overwhelming majority of murders in Ohio involve death by a firearm. In order to more accurately visualize the distribution of murder weapons, a pie chart is created. When firearms are removed, the next three highest categories are : Knives, Blunt Objects, and Unknown. 
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Limitations
+
+A major limitation of this data is the amount of crimes that remain unreported. As we have already seen, not every homicide is able to be solved. However, there are also plenty of homicides that just may never be reported, due to factors such as no body ever found or person ever reported missing. 
+
+Another limitation is that the rates of unsolved homicides were not calculated with respect to population, whether it be for state or for county. 
+
+### Future Studies
+
+A possible future study using this same data could be seeing if we can detect the presence of a serial killer. 
+
+### References
+• [Dataset](https://www.kaggle.com/datasets/murderaccountability/homicide-reports)
+<br>
+• [Murder Accountability Project](https://www.murderdata.org)
+<br>
+• [Ohio Census](https://www.census.gov/quickfacts/OH)
+<br>
+• Special shout out to Dr. Chen for all of her time and support ! :)
