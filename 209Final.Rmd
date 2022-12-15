@@ -465,6 +465,9 @@ A possible future study using this same data could be seeing if we can detect th
 <br>
 <br>
 Further, we could see which of these homicides had similar weapons used, as well as similar victim characteristics. Most serial killers target a specific type of person, so race/age/gender could help us see any trends. While we can keep the year and months of the incidents in mind, there are times where serial killers may remain dormant for years. 
+<br>
+<br>
+While we focused on unsolved homicides in our data, we were provided with characteristics of perpetrators for those crimes that were solved. This could assist us in further profiling potential killers, as we could see if there are similar trends between them. Also, there could be some perpetrators who were caught for one homicide, yet never confessed to another they did. We could use the same idea of seeing victim trends and times to see if they connect to any known perpetrators. 
 
 ### References
 • [Dataset](https://www.kaggle.com/datasets/murderaccountability/homicide-reports)
