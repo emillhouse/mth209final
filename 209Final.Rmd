@@ -13,11 +13,11 @@ output:
 
 <style>
 .chart-title {  /* chart_title  */
-   font-size: 16px;
+   font-size: 18px;
    font-family: Helvetica;
   }
 body{ /* Normal  */
-      font-size: 14px;
+      font-size: 16px;
   }
 </style>
 
@@ -422,6 +422,12 @@ Column {data-width=550, .tabset}
 
 ### US Results
 There are 628384 observations in our data once we drop Alaska, Hawaii, and the District of Columbia. Overall, there is about a rate of 29.4% for unsolved homicide cases in the United States. Specifically, New York, Maryland, Illinois, Massachusetts, and California have the highest state wide rates. On the other hand, we see the most solved cases coming out of North Dakota, Montana, South Dakota, South Carolina, and Idaho. I would say that these results make sense logically; we see more murders going unsolved in areas with denser populations. As sad as it is to say, more people would probably notice a person going missing in a small North Dakota town than bustling New York City. One might argue that smaller, spread out towns would make it easier to get away with murder, but our numbers seem to dismiss this belief. 
+<br>
+<br>
+There is a dramatic difference seem between the overall amount of homicides in California compared to any other state. With a total of 99,783 murders, they make up about 15.9% of the data. To see the difference, the next highest count is in Texas, with only 62,095 homicide cases appearing in the dataset. With a population already accounting for about 12% of the United States, it was not a surprise when California had the highest amount of homicides. For a bit of background on United States population density, most of the American population lives within a 100 miles radius from any coast, so we can infer that the inland states (such as the Dakotas) probably just have less people to commit crimes in general.
+<br>
+<br>
+Ohio is rated number 11 for most counts of homicides in the United States. Further analysis will be applied to the Ohio data as a case study.
 
 ### Ohio Results
 
@@ -438,20 +444,27 @@ The majority of homicide cases in Ohio involve victims who are either White or B
 The highest amount of homicides happen to victims between the age of 18-30, with the amount of cases decreasing exponentially as the victims get older. We do, however, see about 11% of cases occur to victims who are minors; though, these cases, at least visually, appear to be solved more often. 
 <br>
 <br>
-The overwhelming majority of murders in Ohio involve death by a firearm. In order to more accurately visualize the distribution of murder weapons, a pie chart is created. When firearms are removed, the next three highest categories are : Knives, Blunt Objects, and Unknown. 
+The overwhelming majority of murders in Ohio involve death by a firearm. In order to more accurately visualize the distribution of murder weapons, a pie chart is created. When firearms are removed, the next three highest categories are : Knives, Blunt Objects, and Unknown. Unfortunately, I am not sure if this says much about Ohio specifically, as firearms seem to be the weapon of choice all over the United States due to current gun regulations. 
 
 Column {data-width=500}
 -----------------------------------------------------------------------
 
 ### Limitations
 
-A major limitation of this data is the amount of crimes that remain unreported. As we have already seen, not every homicide is able to be solved. However, there are also plenty of homicides that just may never be reported, due to factors such as no body ever found or person ever reported missing. 
-
-Another limitation is that the rates of unsolved homicides were not calculated with respect to population, whether it be for state or for county. 
+A major limitation of this data is the amount of crimes that remain unreported. As we have already seen, not every homicide is able to be solved. However, there are also plenty of homicides that just may never be reported, due to factors such as no body ever being found or person ever being reported missing. 
+<br>
+<br>
+Another limitation is that the rates of unsolved homicides were not calculated with respect to population, whether it be for state or for county. This makes some unsolved homicides rates appear inflated, when really, they could be better explained by the lack of homicides occurring there in general. 
+<br>
+<br>
+Finally, the "type" variable is so non-specific and could be better developed. There is one category that is "murder or manslaughter', which I think could explain more homicide trends if split into two. Manslaughter is defined as the unintentional killing of another person and is often viewed as less severe than murder. By separating the two, we might be able to find other underlying trends. For example, there may be locations where murder is more prevalent than manslaughter, as well as different weapons used between the two. 
 
 ### Future Studies
 
-A possible future study using this same data could be seeing if we can detect the presence of a serial killer. 
+A possible future study using this same data could be seeing if we can detect the presence of a serial killer. This could be potentially done through a closer analysis of the precise locations of the murders. While we do not have access to specific coordinates of where bodies may have been found, we can focus on cities with high counts of unsolved homicides. 
+<br>
+<br>
+Further, we could see which of these homicides had similar weapons used, as well as similar victim characteristics. Most serial killers target a specific type of person, so race/age/gender could help us see any trends. While we can keep the year and months of the incidents in mind, there are times where serial killers may remain dormant for years. 
 
 ### References
 • [Dataset](https://www.kaggle.com/datasets/murderaccountability/homicide-reports)
